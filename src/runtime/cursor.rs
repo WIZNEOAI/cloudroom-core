@@ -166,7 +166,7 @@ pub(super) async fn send(handle: &Handle, request: &str, input: &Value) -> io::R
             )
             .await?;
     }
-    prompt(handle, request, input, false).await
+    prompt(handle, request, input, false, Vec::new()).await
 }
 
 /// Cloudroom's rules for the agent: plain-chat questions and the Cloudroom system prompt.
@@ -179,12 +179,14 @@ pub(super) fn instructions(handle: &Handle) -> String {
     }
 }
 
-/// Sends one turn. Agents that do not keep the instructions for the session get them with every prompt.
+/// Sends one turn, with any inline images after the text. Agents that do not keep the instructions
+/// for the session get them with every prompt.
 pub(super) async fn prompt(
     handle: &Handle,
     request: &str,
     input: &Value,
     instructed: bool,
+    images: Vec<Value>,
 ) -> io::Result<()> {
     let mut text = input["text"].as_str().unwrap_or_default().to_owned();
     if let Some(attachments) = input["attachments"].as_array() {
@@ -197,11 +199,13 @@ pub(super) async fn prompt(
     if !instructed {
         text = format!("{}\n\n{text}", instructions(handle));
     }
+    let mut prompt = vec![json!({"type":"text","text":text})];
+    prompt.extend(images);
     handle
         .process
         .dispatch(
             "session/prompt",
-            json!({"sessionId":handle.native()?,"prompt":[{"type":"text","text":text}]}),
+            json!({"sessionId":handle.native()?,"prompt":prompt}),
             Some(request),
             None,
         )

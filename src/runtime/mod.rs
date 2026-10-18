@@ -345,6 +345,8 @@ pub struct Handle {
     baseline: Arc<Mutex<Option<String>>>,
     /// ACP agent capabilities from `initialize`; empty for other harnesses.
     acp: Arc<Mutex<Value>>,
+    /// The ACP session's latest config options (model, effort); only fx keeps them.
+    acp_config: Arc<Mutex<Value>>,
     rpc_timeout: Duration,
     command_guard_enabled: bool,
     strip_ai_co_authors: bool,
@@ -570,6 +572,7 @@ impl Handle {
                 reasoning: resume.as_ref().and_then(|saved| saved.reasoning.clone()),
                 baseline: Arc::new(Mutex::new(None)),
                 acp: Arc::new(Mutex::new(Value::Null)),
+                acp_config: Arc::new(Mutex::new(Value::Null)),
                 rpc_timeout: config.rpc_timeout,
                 command_guard_enabled,
                 strip_ai_co_authors,
@@ -662,8 +665,12 @@ impl Handle {
         startup.rpc_timeout = self.rpc_timeout * STARTUP_RPC_MULTIPLIER;
         codex::start(&startup, Some(fork)).await
     }
-    /// Pi confirms the turn's thinking level before the prompt. Codex sends effort with turn/start.
+    /// Pi confirms the turn's thinking level and fx switches its effort before the prompt.
+    /// Codex sends effort with turn/start.
     pub async fn prepare_turn(&self) -> io::Result<()> {
+        if self.kind == Kind::Fx {
+            return fx::prepare_turn(self).await;
+        }
         if self.kind == Kind::Pi
             && let Some(reasoning) = &self.reasoning
         {
@@ -855,9 +862,9 @@ impl Handle {
     pub async fn pause(&self, paused: bool) -> io::Result<()> {
         self.process.pause(paused).await
     }
-    /// Stops the tool command filling the disk; see `linux::Workload::kill_top_writer`.
-    pub fn kill_top_writer(&self) -> io::Result<Option<String>> {
-        self.process.kill_top_writer()
+    /// The tool command that wrote the most to disk; see `linux::Workload::top_writer`.
+    pub fn top_writer(&self) -> io::Result<Option<linux::Writer>> {
+        self.process.top_writer()
     }
     pub fn request_shutdown(&self) {
         self.process.request_shutdown();

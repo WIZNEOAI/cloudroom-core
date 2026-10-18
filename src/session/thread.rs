@@ -25,7 +25,7 @@ const USAGE: &str = "room-cli thread update --self --title TITLE
 room-cli thread update --self --reasoning-level LEVEL
 room-cli thread archive --self
 room-cli thread stop --self
-room-cli thread spawn --provider codex|claude-code|pi|opencode|hermes|devin [--model MODEL] [--reasoning-level LEVEL] [--service-tier default|fast] [--title TITLE] [--shared-sandbox] --prompt TEXT|--prompt-file PATH
+room-cli thread spawn --provider codex|claude-code|pi|opencode|hermes|devin|fx [--model MODEL] [--reasoning-level LEVEL] [--service-tier default|fast] [--title TITLE] [--shared-sandbox] --prompt TEXT|--prompt-file PATH
 room-cli thread list [--include-archived]
 room-cli thread output CHILD_ID [--all]
 room-cli thread tell CHILD_ID TEXT
@@ -274,7 +274,7 @@ async fn spawn(
         .as_deref()
         .map(|p| {
             serde_json::from_value(json!(p)).map_err(|_| {
-                bad("Use --provider codex, claude-code, pi, opencode, hermes or devin")
+                bad("Use --provider codex, claude-code, pi, opencode, hermes, devin or fx")
             })
         })
         .transpose()?;

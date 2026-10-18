@@ -153,10 +153,13 @@ impl Manager {
                         runtime::Kind::Devin => runtime::DEVIN_REASONING_LEVELS,
                         _ => runtime::PI_REASONING_LEVELS,
                     });
-                    // Cursor's print mode has no image input; Cursor and OpenCode open images from the attached path.
-                    harness["attachments"] =
-                        json!({"images":*kind != runtime::Kind::Fx,"files":true});
+                    // Cursor and OpenCode open images from the attached path; fx gets them inline.
+                    harness["attachments"] = json!({"images":true,"files":true});
                     harness["provider_selection"] = json!(false);
+                    // fx switches effort per turn; the others keep the launch level.
+                    if *kind == runtime::Kind::Fx {
+                        harness["prompt_reasoning"] = json!(true);
+                    }
                     if *kind == runtime::Kind::Cursor {
                         harness["models"] = if self.storage.blocks() {
                             Value::Null
@@ -202,7 +205,6 @@ impl Manager {
             if matches!(
                 session.harness,
                 runtime::Kind::Cursor
-                    | runtime::Kind::Fx
                     | runtime::Kind::OpenCode
                     | runtime::Kind::Hermes
                     | runtime::Kind::Devin
