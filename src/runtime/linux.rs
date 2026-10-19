@@ -310,10 +310,17 @@ fn written(pid: i32) -> u64 {
         .unwrap_or(0)
 }
 fn signal(pid: i32, number: i32) {
+    send(pid, number);
+}
+/// Asks a process to stop (SIGTERM). False when Core cannot signal it, such as another account's process.
+pub(crate) fn terminate(pid: u32) -> bool {
+    send(pid as i32, 15)
+}
+fn send(pid: i32, number: i32) -> bool {
     unsafe extern "C" {
         fn kill(pid: i32, signal: i32) -> i32;
     }
-    unsafe { kill(pid, number) };
+    unsafe { kill(pid, number) == 0 }
 }
 
 #[cfg(target_os = "linux")]

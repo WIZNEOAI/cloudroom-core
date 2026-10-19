@@ -14,7 +14,7 @@ use tokio::process::Command;
 const SKILL_WAIT: std::time::Duration = std::time::Duration::from_secs(60);
 const INSTRUCTIONS: &str = "Cloudroom owns this cloud session. Ask clarifying questions in ordinary chat, not interactive tools. Start child threads with `room-cli thread spawn` (any harness and model; see `room-cli thread --help`); each gets its own sandbox with a copy of your code (add `--shared-sandbox` to run it in yours), shows under this thread, and Cloudroom messages you when it finishes. Do not use native subagents, workflows, or agent teams. Fast mode is unavailable. Rewinding changes conversation history only, never files.";
 
-fn uuid() -> io::Result<String> {
+pub(super) fn uuid() -> io::Result<String> {
     let mut bytes = [0u8; 16];
     File::open("/dev/urandom")?.read_exact(&mut bytes)?;
     bytes[6] = (bytes[6] & 15) | 64;

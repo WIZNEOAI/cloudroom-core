@@ -14,6 +14,7 @@ pub(super) const FX: cursor::Flavor = cursor::Flavor {
     notices: &["[context] ", "skill discovery warning: "],
     replay: false,
     explain_stops: true,
+    empty_turn: None,
 };
 
 pub(super) fn command(config: &Config, profile: &HarnessConfig) -> io::Result<Command> {

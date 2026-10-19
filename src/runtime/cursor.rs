@@ -32,6 +32,8 @@ pub(super) struct Flavor {
     pub replay: bool,
     /// Says why the agent ended a turn early, as Local threads do.
     pub explain_stops: bool,
+    /// Fails a turn the agent ended without any output, with this reason.
+    pub empty_turn: Option<&'static str>,
 }
 pub(super) const CURSOR: Flavor = Flavor {
     harness: "cursor",
@@ -41,7 +43,8 @@ pub(super) const CURSOR: Flavor = Flavor {
     capture: true,
     notices: &[],
     replay: true,
-    explain_stops: false,
+    explain_stops: true,
+    empty_turn: None,
 };
 
 pub(crate) fn capabilities(kind: Kind) -> Value {
@@ -401,6 +404,10 @@ impl Adapter for Protocol {
     fn encode(&mut self, id: u64, method: &str, params: Value, request: Option<&str>) -> Value {
         if matches!(method, "session/new" | "session/load" | "session/resume") {
             self.opening = Some(id);
+            // An agent opened by its own key (OpenClaw) answers without a session ID.
+            if self.expected.is_none() {
+                self.expected = params["sessionId"].as_str().map(str::to_owned);
+            }
         }
         if request.is_some() {
             self.prompt = Some(id);
@@ -630,12 +637,17 @@ impl Adapter for Protocol {
                 {
                     self.acknowledgement = Some((value["id"].clone(), id));
                 }
+                let silent = stop == Some("end_turn") && !state.started;
                 let status = match stop {
+                    _ if silent && self.flavor.empty_turn.is_some() => "failed",
                     Some("end_turn") => "completed",
                     Some("cancelled") => "interrupted",
                     _ => "failed",
                 };
                 let error = (self.flavor.explain_stops && status == "failed").then(|| {
+                    if silent && let Some(reason) = self.flavor.empty_turn {
+                        return reason.to_owned();
+                    }
                     match (stop, value["error"]["message"].as_str()) {
                         (Some(stop), _) => format!("{} stopped the turn: {stop}", self.flavor.name),
                         (None, Some(message)) => {
