@@ -98,7 +98,8 @@ pub fn router(manager: Arc<Manager>, token: String) -> Router {
         .route("/v1/sessions/{id}/close", post(close))
         .route("/v1/sessions/{id}/events", get(events))
         .route("/v1/sessions/{id}/stream", get(stream))
-        .layer(DefaultBodyLimit::max(64 * 1024))
+        // Text arrives twice (`text` and `content`), so a full message needs room (ADR 0269).
+        .layer(DefaultBodyLimit::max(1024 * 1024))
         .layer(middleware::from_fn_with_state(
             Arc::new(token),
             authenticate,
@@ -850,7 +851,7 @@ async fn start(
     if let Some(parent) = body.parent_session {
         let prompt = body
             .prompt
-            .filter(|p| !p.trim().is_empty() && p.len() <= 32768);
+            .filter(|p| !p.trim().is_empty() && p.len() <= session::MAX_PROMPT);
         let title = body.title.map(|t| t.trim().to_owned());
         if body.workspace.is_some()
             || body.workspace_name.is_some()
@@ -868,7 +869,7 @@ async fn start(
             ));
         }
         let prompt = prompt.ok_or(session::Error::Conflict(
-            "prompt must contain 1-32768 bytes of text",
+            "prompt must contain 1-262144 bytes of text",
         ))?;
         let spawn = session::Spawn {
             harness: body.harness,
@@ -981,9 +982,9 @@ fn prompt_input(
         .as_ref()
         .and_then(Value::as_array)
         .is_some_and(|items| !items.is_empty());
-    if (text.trim().is_empty() && !has_attachments) || text.len() > 32768 {
+    if (text.trim().is_empty() && !has_attachments) || text.len() > session::MAX_PROMPT {
         return Err(session::Error::Conflict(
-            "prompt must contain 1-32768 bytes of text",
+            "prompt must contain 1-262144 bytes of text",
         ));
     }
     let mut input = json!({"text": text});
@@ -1093,9 +1094,9 @@ async fn steer(
 ) -> Result<impl IntoResponse> {
     key(&body.request_id)?;
     key(&body.target_request_id)?;
-    if body.text.trim().is_empty() || body.text.len() > 32768 {
+    if body.text.trim().is_empty() || body.text.len() > session::MAX_PROMPT {
         return Err(session::Error::Conflict(
-            "prompt must contain 1-32768 bytes of text",
+            "prompt must contain 1-262144 bytes of text",
         ));
     }
     let receipt = manager.command(

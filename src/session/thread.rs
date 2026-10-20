@@ -249,8 +249,8 @@ async fn spawn(
 ) -> Result<Json<Value>, Failure> {
     let parent = caller(&m, peer, "thread spawn")?;
     let bad = |message: &str| fail(StatusCode::CONFLICT, message);
-    if input.prompt.trim().is_empty() || input.prompt.len() > 32768 {
-        return Err(bad("Use a prompt of 1-32768 bytes"));
+    if input.prompt.trim().is_empty() || input.prompt.len() > super::MAX_PROMPT {
+        return Err(bad("Use a prompt of 1-262144 bytes"));
     }
     if input.title.as_deref().is_some_and(|t| !valid(t.trim())) {
         return Err(bad("Use a title of 1-200 characters"));
@@ -596,8 +596,11 @@ async fn tell(
     Json(input): Json<Tell>,
 ) -> Result<Json<Value>, Failure> {
     let parent = caller(&m, peer, "thread tell")?;
-    if input.text.trim().is_empty() || input.text.len() > 32768 {
-        return Err(fail(StatusCode::CONFLICT, "Use a message of 1-32768 bytes"));
+    if input.text.trim().is_empty() || input.text.len() > super::MAX_PROMPT {
+        return Err(fail(
+            StatusCode::CONFLICT,
+            "Use a message of 1-262144 bytes",
+        ));
     }
     if relay::thread_id(&id) {
         return relay::command(&m, &parent, &id, "tell", Some(&input.text)).await;

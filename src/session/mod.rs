@@ -280,6 +280,8 @@ impl From<io::Error> for Error {
         Self::Storage(error.to_string())
     }
 }
+/// The most text one message to an agent can carry (ADR 0269).
+pub const MAX_PROMPT: usize = 256 * 1024;
 const JOURNAL_UNWRITABLE: &str = "session journal is not writable";
 type Result<T> = std::result::Result<T, Error>;
 

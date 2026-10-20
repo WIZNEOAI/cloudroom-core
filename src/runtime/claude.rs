@@ -644,12 +644,12 @@ impl Protocol {
             }
             Some("notifications/initialized") => json!({}),
             Some("tools/list") => {
-                json!({"tools":[{"name":"delegate","description":"Run a separately managed Cloudroom child agent in this workspace. Returns its result and session ID. The child has independent history and controls.","inputSchema":{"type":"object","properties":{"prompt":{"type":"string","minLength":1,"maxLength":32768}},"required":["prompt"],"additionalProperties":false}}]})
+                json!({"tools":[{"name":"delegate","description":"Run a separately managed Cloudroom child agent in this workspace. Returns its result and session ID. The child has independent history and controls.","inputSchema":{"type":"object","properties":{"prompt":{"type":"string","minLength":1,"maxLength":crate::session::MAX_PROMPT}},"required":["prompt"],"additionalProperties":false}}]})
             }
             Some("tools/call") if message["params"]["name"] == "delegate" => {
                 let prompt = message["params"]["arguments"]["prompt"]
                     .as_str()
-                    .filter(|p| !p.trim().is_empty() && p.len() <= 32768);
+                    .filter(|p| !p.trim().is_empty() && p.len() <= crate::session::MAX_PROMPT);
                 if let (Some(prompt), Some((_, active))) = (
                     prompt,
                     self.active.as_ref().filter(|(_, active)| {
@@ -673,7 +673,7 @@ impl Protocol {
                         prompt: prompt.into(),
                     })]);
                 }
-                json!({"isError":true,"content":[{"type":"text","text":"Delegation requires an active parent and a non-empty prompt of at most 32768 bytes."}]})
+                json!({"isError":true,"content":[{"type":"text","text":"Delegation requires an active parent and a non-empty prompt of at most 262144 bytes."}]})
             }
             _ => {
                 json!({"isError":true,"content":[{"type":"text","text":"Unsupported Cloudroom tool operation"}]})

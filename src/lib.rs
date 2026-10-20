@@ -58,6 +58,7 @@ pub const FEATURES: &[&str] = &[
     "drain",
     "terminals",
     "files_wait",
+    "long_prompts",
 ];
 
 pub async fn serve(mut config: config::Config) -> Result<(), Box<dyn std::error::Error>> {
