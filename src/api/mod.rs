@@ -48,6 +48,7 @@ pub fn router(manager: Arc<Manager>, token: String) -> Router {
         .route("/v1/accounts/codex/login", post(codex_login))
         .route("/v1/accounts/codex/import", post(codex_import))
         .route("/v1/accounts/codex/switched", post(codex_switched))
+        .route("/v1/accounts/claude/switched", post(claude_switched))
         .route("/v1/accounts/codex/cancel", post(codex_cancel))
         .route("/v1/workspaces/{id}", get(workspace))
         .route("/v1/settings", get(crate::sync::settings))
@@ -326,6 +327,10 @@ async fn codex_switched(State(manager): State<Arc<Manager>>) -> Json<Value> {
     let (status, continued) = manager.codex_switched().await;
     Json(json!({"account":status,"continued":continued}))
 }
+/// The website wrote a new Claude login to this sandbox (ADR 0117).
+async fn claude_switched(State(manager): State<Arc<Manager>>) -> Json<Value> {
+    Json(json!({"continued":manager.claude_switched()}))
+}
 async fn codex_cancel(
     State(manager): State<Arc<Manager>>,
     Json(input): Json<RequestId>,
@@ -602,7 +607,7 @@ struct Start {
     parent_thread: Option<String>,
     prompt: Option<String>,
     title: Option<String>,
-    /// Starts a side chat on a copy of this session's conversation; it inherits the source's settings.
+    /// Starts a side chat on a copy of this session's conversation, or a `fresh` one with none; it inherits the source's settings.
     fork: Option<session::ForkFrom>,
 }
 
