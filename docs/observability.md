@@ -42,7 +42,7 @@ Inspect the existing `cloudroom_diagnostics` table with the owner-scoped query i
 
 ## Protected harness stderr
 
-Raw stderr is untrusted and may contain credentials, prompts or private paths. It never enters ordinary logs, uploads, session history, API responses or SSE. Only the protected service account and authorized administrators should inspect it; the core token does not grant access. Do not automatically include it in support bundles or share it without reviewing/redacting it.
+Raw stderr is untrusted and may contain credentials, prompts or private paths. It stays out of ordinary logs and diagnostic uploads. Failed or lost sessions include a tail of up to 2,000 bytes in the owner's history, saved-history uploads, API responses and SSE (ADR 0123). The core token grants access to this tail; local capture files remain protected. Review/redact stderr before sharing it or including it in support bundles.
 
 - Runtime continuously drains each process in 8 KiB chunks, retaining only the last **16 KiB**. Capture uses bytes, not lines. After workload cleanup it waits at most **250 ms** for EOF, then cancels and joins the reader. `stderr_complete: false` means the reader failed or timed out; `stderr_truncated: true` means earlier bytes were discarded. Neither changes recovery behavior.
 - Nonempty tails are saved once at exit, including graceful exits and startup/resume/model-discovery failures. Errors before a process is spawned have no stderr capture. A still-running process's tail stays in memory; abrupt core termination loses it.
