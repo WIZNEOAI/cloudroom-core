@@ -43,14 +43,17 @@ pub(super) fn command(
         Some(saved) => saved.id.clone(),
         None => uuid()?,
     };
+    // Claude keeps only the last `--settings`, so every setting goes in one, the Command Guard's hooks included.
+    let mut settings = json!({"fastMode": false, "enableWorkflows": false});
+    if strip_ai_co_authors {
+        settings["attribution"] = json!({"commit": "", "pr": ""});
+    }
+    let settings = settings.to_string();
     let mut command = if guarded {
-        super::command_guard::claude_command(config, profile)
+        super::command_guard::claude_command(config, profile, &settings)
     } else {
         let mut command = super::command(&profile.binary, config);
-        command.args([
-            "--settings",
-            r#"{"fastMode":false,"enableWorkflows":false}"#,
-        ]);
+        command.args(["--settings", &settings]);
         command
     };
     profile_env(&mut command, config, profile);
@@ -85,9 +88,6 @@ pub(super) fn command(
             "--mcp-config",
             r#"{"mcpServers":{"cloudroom":{"type":"sdk","name":"cloudroom"}}}"#,
         ]);
-    if strip_ai_co_authors {
-        command.args(["--settings", r#"{"attribution":{"commit":"","pr":""}}"#]);
-    }
     if let Some(saved) = saved {
         command.arg("--resume").arg(&saved.id);
         if let Some(before) = fork {

@@ -12,5 +12,5 @@ description: 'Run commands and copy files on the user’s paired Mac from a Clou
 - `Mac unavailable` means it is offline, asleep, or access is off, and says which when Cloudroom knows, including why a Mac that is online can't connect. `room-cli mac status` gives the same `reason`. Continue the cloud work; tell the user only if the Mac is essential, and pass the reason on.
 - `Mac not responding` means it is connected but did not pick up the command in time: asleep, very busy, or a slow link. Retry once; then treat it like `Mac unavailable`.
 - `Operation not permitted` in Desktop, Documents, or Downloads means macOS privacy blocks it. Ask the user to update Cloudroom, then turn on Cloudroom in System Settings → Privacy & Security → Files and Folders. Older versions need `python3` turned on there instead.
-- If the Mac disconnects mid-command, the command keeps running there. Check it with `room-cli mac result JOB`. Never re-run it automatically.
+- If the Mac disconnects mid-command, the command keeps running there. Check it with `room-cli mac result JOB`. Never re-run it automatically. `lost` means the Mac app restarted mid-command: check its effects first.
 - This is the user's real computer. Read before changing. Never delete or overwrite their work unless asked.
