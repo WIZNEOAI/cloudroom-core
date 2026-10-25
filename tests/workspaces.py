@@ -207,16 +207,20 @@ class WorkspaceTests(unittest.TestCase):
         root = self.state.resolve()/'code'; root.mkdir()
         outside = self.root.resolve()/'outside'; outside.mkdir()
         (outside/'keep').write_text('private')
-        (root/'escape').symlink_to(outside)
-        self.seed('escape',root/'escape')
-        # Preserve the lexical path so the no-follow directory walk must reject it.
-        pending = self.state/'workspaces/escape.pending'
-        pending.write_text(json.dumps({'id':'escape','path':str(root/'escape')}))
-        record = self.state/'00000000000000000001.record'
-        value=json.loads(record.read_text()); value['data']['workspace']['path']=str(root/'escape');record.write_text(json.dumps(value))
+        for key in ['escape', 'legacy']:
+            (root/key).symlink_to(outside)
+            self.seed(key,root/key)
+            # Preserve lexical paths so the no-follow directory walk must reject them.
+            lexical = str(root/key)
+            pending = self.state/f'workspaces/{key}.pending'
+            pending.write_text(json.dumps({'id':key,'path':lexical}))
+            record = next(path for path in self.state.glob('*.record')
+                          if json.loads(path.read_text()).get('data',{}).get('request_id') == key)
+            value=json.loads(record.read_text()); value['data']['workspace']['path']=lexical;record.write_text(json.dumps(value))
         (self.state/'snapshot.json').unlink(missing_ok=True)  # Core trusts its snapshot over edited old records.
         self.start()
-        until(lambda:self.service.session('cr_escape')['state']=='failed','invalid mapping',10)
+        for key in ['escape', 'legacy']:
+            until(lambda:self.service.session('cr_'+key)['state']=='failed','invalid mapping '+key,10)
         self.assertFalse((outside/'child').exists())
         self.assertEqual((outside/'keep').read_text(),'private')
         self.service.request('POST','/v1/sessions',{'request_id':'bad','workspace':'../outside'},409)
