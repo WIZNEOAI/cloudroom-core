@@ -556,3 +556,29 @@ async fn check_shutdown(model: &str) {
         .unwrap()
     );
 }
+
+#[test]
+fn command_guard_blocks_xen_and_mmc_disk_writes() {
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/runtime/command-guard.mjs");
+    let script = r#"
+const { checkCommand } = await import("file://" + process.argv[1]);
+for (const command of [
+  "dd of=/dev/xvda",
+  "dd of=/dev/mmcblk0",
+  "echo x>/dev/xvda",
+  "echo x>/dev/mmcblk0",
+]) {
+  if (checkCommand(command) === null) throw new Error(`Allowed dangerous command: ${command}`);
+}
+"#;
+    let output = Command::new("node")
+        .args(["--input-type=module", "-e", script])
+        .arg(source)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
